@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>English to SQL Converter</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    </head>
+    <body>
+        <div class="container mt-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        {% if category == 'success' %}
+                            <div class="alert alert-success">
+                                ✓ {{ message }}
+                            </div>
+                        {% elif category == 'error' %}
+                            <div class="alert alert-danger">
+                                ✗ {{ message }}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                ℹ {{ message }}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <div class="card">
+                <div class="card-header">
+                    <h1 class="m-0"> English to SQL Converter</h1>
+                </div>
+                <div class="card-body">
+                    <p>Upload a CSV file and ask questions in English. We'll convert them to SQL and show you the results!</p>
+                    
+                    {% if not has_data %}
+                        <hr>
+                        <h3>Step 1: Upload Your CSV File</h3>
+                        <form action="/upload" method="post" enctype="multipart/form-data" class="mb-4">
+                            <div class="form-group">
+                                <input type="file" name="file" accept=".csv" required>
+                                <button type="submit" class="btn btn-primary">Upload CSV</button>
+                            </div>
+                        </form>
+                    {% else %}
+                        <hr>
+                        <h3> Database Schema</h3>
+                        <div class="schema-box">
+                            <pre>{{ schema }}</pre>
+                        </div>
+                        
+                        <hr>
+                        <h3>Step 2: Ask a Question</h3>
+                        <form action="/query" method="post" class="mb-4">
+                            <div class="form-group">
+                                <input type="text" name="query" placeholder="e.g., What is the average value? How many records are there?" required>
+                                <button type="submit" class="btn btn-success">Run Query</button>
+                            </div>
+                        </form>
+                        
+                        {% if natural_query %}
+                            <hr>
+                            <h4> Query Results</h4>
+                            <div class="query-info">
+                                <p><strong>Your question:</strong> {{ natural_query }}</p>
+                                <p><strong>Generated SQL:</strong></p>
+                                <div class="sql-box">
+                                    <code>{{ sql_query }}</code>
+                                </div>
+                            </div>
+                            
+                            <h4>Results:</h4>
+                            {% if results %}
+                                <div class="results-table">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                {% for col in columns %}
+                                                    <th>{{ col }}</th>
+                                                {% endfor %}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in results %}
+                                                <tr>
+                                                    {% for cell in row %}
+                                                        <td>{{ cell }}</td>
+                                                    {% endfor %}
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <p class="text-muted">No results returned</p>
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+                    <h5>Download the results</h5>
+                    <form action = '/download_csv' method='get'>
+                        <button type='submit' class='btn btn-secondary'>Download CSV</button>
+                    </form>
+                </div>
+            </div>
+            <h6>Query History</h6>
+            <div>
+                {% if query_history %}
+                    <ul>
+                        {% for item in query_history %}
+                            <li>
+                                <strong>Question:</strong> {{ item.natural_query }}<br>
+                                <strong>SQL:</strong> <code>{{ item.sql_query }}</code><br>
+                                <form action="{{ url_for('run_history', index=loop.index0) }}" method="get" style="display:inline; margin-top:6px;">
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">Run this query</button>
+                                </form>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No queries made yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </body>
+</html>
