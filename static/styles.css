@@ -407,3 +407,106 @@ pre code {
   padding: 0;
   background-color: transparent;
 }
+
+/* ===== SQL Editor & Code Styles ===== */
+.sql-box {
+  background-color: #f8f9fa;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  margin: var(--spacing-md) 0;
+  overflow-x: auto;
+}
+
+.sql-box code {
+  background-color: transparent;
+  padding: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
+/* CodeMirror Editor Styling */
+.CodeMirror {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  height: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  margin: var(--spacing-md) 0;
+}
+
+.CodeMirror-gutters {
+  background-color: #f8f9fa;
+  border-right: 1px solid var(--border-color);
+}
+
+/* Schema Display */
+.schema-box {
+  background-color: #f8f9fa;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  margin: var(--spacing-md) 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.schema-box pre {
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+
+/* Query Info Section */
+.query-info {
+  background-color: var(--light-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--spacing-lg);
+  margin: var(--spacing-md) 0;
+}
+
+/* Results Table */
+.results-table {
+  overflow-x: auto;
+  margin: var(--spacing-lg) 0;
+}
+
+.results-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.results-table th {
+  background-color: #007bff;
+  color: white;
+  padding: var(--spacing-md);
+  text-align: left;
+  font-weight: 600;
+}
+
+.results-table td {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.results-table tr:hover {
+  background-color: var(--light-color);
+}
+
+/* Chart Container */
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  margin: var(--spacing-lg) 0;
+  padding: var(--spacing-lg);
+  background-color: var(--light-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+}
+
+.chart-container canvas {
+  max-height: 400px;
+}

@@ -5,6 +5,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>English to SQL Converter</title>
         <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+        <!-- CodeMirror CSS -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+        <!-- Chart.js -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     </head>
     <body>
         <div class="container mt-4">
@@ -49,6 +54,13 @@
                         <h3> Database Schema</h3>
                         <div class="schema-box">
                             <pre>{{ schema }}</pre>
+                            <p><strong>Statistics:</strong></p>
+                            <ul>
+                                <p><strong>Number of Columns:</strong> {{ stats.num_columns }}</p>
+                                <p><strong>Number of Rows:</strong> {{ stats.num_rows }}</p>
+                                <p><strong>Has Null Values:</strong> {{ stats.has_null_values }}</p>
+                                <p><strong>Data Types:</strong> {{ stats.data_types | join(', ') }}</p>
+                            </ul>
                         </div>
                         
                         <hr>
@@ -62,17 +74,35 @@
                         
                         {% if natural_query %}
                             <hr>
-                            <h4> Query Results</h4>
+                            <h4>Query Editor</h4>
                             <div class="query-info">
                                 <p><strong>Your question:</strong> {{ natural_query }}</p>
-                                <p><strong>Generated SQL:</strong></p>
-                                <div class="sql-box">
-                                    <code>{{ sql_query }}</code>
-                                </div>
+                                <p><strong>SQL Query:</strong></p>
+                                
+                                {% if show_editor %}
+                                    <!-- SQL Editor with CodeMirror -->
+                                    <form action="/execute_sql" method="post" class="mb-4">
+                                        <textarea id="sql-editor" name="sql">{{ sql_query }}</textarea>
+                                        <button type="submit" class="btn btn-success" style="margin-top: 10px;">Execute SQL</button>
+                                    </form>
+                                {% else %}
+                                    <!-- Read-only SQL display -->
+                                    <div class="sql-box">
+                                        <code>{{ sql_query }}</code>
+                                    </div>
+                                {% endif %}
                             </div>
                             
-                            <h4>Results:</h4>
                             {% if results %}
+                                <hr>
+                                <h4>Results:</h4>
+                                
+                                {% if is_chartable %}
+                                <div class="chart-container">
+                                    <canvas id="resultChart"></canvas>
+                                </div>
+                                {% endif %}
+                                
                                 <div class="results-table">
                                     <table>
                                         <thead>
@@ -93,15 +123,18 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                <hr>
+                                <h5>Download the results</h5>
+                                <form action='/download_csv' method='get'>
+                                    <button type='submit' class='btn btn-secondary'>Download CSV</button>
+                                </form>
                             {% else %}
-                                <p class="text-muted">No results returned</p>
+                                {% if not show_editor %}
+                                    <p class="text-muted">No results returned</p>
+                                {% endif %}
                             {% endif %}
                         {% endif %}
                     {% endif %}
-                    <h5>Download the results</h5>
-                    <form action = '/download_csv' method='get'>
-                        <button type='submit' class='btn btn-secondary'>Download CSV</button>
-                    </form>
                 </div>
             </div>
             <h6>Query History</h6>
@@ -123,5 +156,70 @@
                 {% endif %}
             </div>
         </div>
+        
+        <!-- CodeMirror JS -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/sql/sql.min.js"></script>
+        
+        <script>
+            // Initialize CodeMirror for SQL editor
+            var sqlEditor = document.getElementById('sql-editor');
+            if (sqlEditor) {
+                CodeMirror.fromTextArea(sqlEditor, {
+                    lineNumbers: true,
+                    mode: 'text/x-sql',
+                    theme: 'monokai',
+                    indentUnit: 2,
+                    lineWrapping: true,
+                    matchBrackets: true,
+                    autoCloseBrackets: true,
+                    height: 'auto',
+                    minHeight: '150px'
+                });
+            }
+            
+            // Initialize Chart.js for results
+            var chartCanvas = document.getElementById('resultChart');
+            if (chartCanvas) {
+                var chartDataJson = '{{ chart_data|tojson|safe }}';
+                var chartData = chartDataJson && chartDataJson !== 'null' ? JSON.parse(chartDataJson) : null;
+                if (chartData) {
+                    var ctx = chartCanvas.getContext('2d');
+                    new Chart(ctx, {
+                        type: chartData.type,
+                        data: {
+                            labels: chartData.labels,
+                            datasets: [{
+                                label: chartData.label,
+                                data: chartData.data,
+                                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1,
+                                fill: chartData.type === 'bar' ? true : false
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top'
+                                },
+                                title: {
+                                    display: true,
+                                    text: chartData.title || 'Query Results'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        </script>
     </body>
 </html>
