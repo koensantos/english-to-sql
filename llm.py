@@ -81,3 +81,21 @@ Please fix the SQL query. Respond with ONLY the corrected SQL, nothing else."""
             return sql_text
 
     raise ValueError(f"Failed to fix SQL query after {max_retries} attempts. Last error: {error_message}")
+
+def generate_sql_explanation(schema, query, sql):
+    """Generate an explanation for the SQL query using Groq."""
+    prompt = f"""Given the following database schema:
+{schema}
+The user asked: {query}
+You generated this SQL query:
+{sql}
+Please provide a clear and concise explanation of what this SQL query does. Respond with ONLY the explanation
+, nothing else."""
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    explanation = response.choices[0].message.content.strip()
+    return explanation

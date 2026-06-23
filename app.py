@@ -1,9 +1,11 @@
+import traceback
+
 import flask
 from werkzeug.utils import secure_filename
 import os
 from database import create_database_from_csv, run_query, get_column_names, get_non_empty_columns
 from schema import extract_schema, get_schema_stats
-from llm import generate_sql, generate_sql_with_retry
+from llm import generate_sql, generate_sql_explanation, generate_sql_with_retry
 from flask import session
 
 import csv
@@ -92,15 +94,18 @@ def detect_chart_data(results, columns):
 def index():
     has_data = 'csv_content' in flask.session
     schema = None
+    stats = None  # ← add this
     if has_data:
         conn = create_database_from_csv(flask.session['csv_content'])
         schema = extract_schema(conn)
         stats = get_schema_stats(conn)
+    
+    
 
     return flask.render_template(
         "main.html",
         schema = schema,
-        stats = stats if has_data else None,
+        stats = stats,
         has_data=has_data,
         query_history=get_query_history(),
         show_editor=False,
@@ -162,9 +167,12 @@ def submit_query():
         
         # Extract schema
         db_schema = extract_schema(db_connection)
-        
+        stats = get_schema_stats(db_connection)
+
         # Generate SQL from natural language
         sql_query = generate_sql(db_schema, query_text)
+
+        sql_explanation = generate_sql_explanation(db_schema, query_text, sql_query)
         
         # If the query is empty or does not contain a valid SQL statement, raise an error
         if not sql_query or not any(keyword in sql_query.upper() for keyword in ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'WITH']):
@@ -178,11 +186,13 @@ def submit_query():
         return flask.render_template(
             "main.html",
             schema=db_schema,
+            stats=stats,
             has_data=True,
             sql_query=sql_query,
             natural_query=query_text,
             query_history=get_query_history(),
             show_editor=True,
+            sql_explanation=sql_explanation,
             results=None,
             columns=None,
             is_chartable=False,
@@ -190,6 +200,7 @@ def submit_query():
         )
     except Exception as e:
         # Display error message to user
+        print("SUBMIT QUERY ERROR:", traceback.format_exc())
         flask.flash(f'Error generating query: {str(e)}', category='error')
         return flask.redirect(flask.url_for('index'))
 
@@ -212,9 +223,10 @@ def execute_sql():
         # Create database connection
         db_connection = create_database_from_csv(flask.session['csv_content'])
         db_schema = extract_schema(db_connection)
-        
+        stats = get_schema_stats(db_connection)
         # Run the query
         query_result = run_query(db_connection, sql_query)
+        sql_explanation = generate_sql_explanation(db_schema, natural_query, sql_query)
         
         # If error, offer retry
         if isinstance(query_result, str) and query_result.lower().startswith('error'):
@@ -222,10 +234,12 @@ def execute_sql():
             return flask.render_template(
                 "main.html",
                 schema=db_schema,
+                stats=stats,
                 has_data=True,
                 sql_query=sql_query,
                 natural_query=natural_query,
                 query_history=get_query_history(),
+                sql_explanation=sql_explanation,
                 show_editor=True,
                 results=None,
                 columns=None,
@@ -255,6 +269,8 @@ def execute_sql():
             "main.html",
             schema=db_schema,
             has_data=True,
+            stats=stats,
+            sql_explanation=sql_explanation,
             sql_query=sql_query,
             results=results,
             columns=columns,
